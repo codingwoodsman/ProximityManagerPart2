@@ -34,7 +34,7 @@ public class ProximityManager : MonoBehaviour
         //One list of meshes per animated model
         npcMeshes = new List<List<Mesh>>();
 
-        //The second group of meshes representing the second pose in the walk animation to go to and from
+        //List of a list of meshes representing a second pose
         npcMeshes2 = new List<List<Mesh>>();
 
         //GameObjects associated with each list of meshes (probably 1 per animated model)
@@ -56,11 +56,11 @@ public class ProximityManager : MonoBehaviour
         isWalk = new List<bool>();
         walkIndex = 0;
 
-
         int j = 0;
-        for (int i = 0; i < GOList.Length; i++)
+
+        for(int i = 0; i < GOList.Length; i++)
         {
-            if (GOList[i].name.Contains("nackedSet"))
+            if(GOList[i].name.Contains("nackedSet"))
             {
                 npcs.Add(GOList[i]);
                 isWalk.Add(true);
@@ -75,10 +75,11 @@ public class ProximityManager : MonoBehaviour
 
                 //for every child in the gameObject we are meshifying, create a new mesh slot
                 //if there is a skinned mesh renderer 
-                for (int k = 0; k < npcs[j].transform.childCount; k++)
+                for(int k = 0; k < npcs[j].transform.childCount; k++)
                 {
-                    if (GOList[i].transform.GetChild(k).GetComponent<SkinnedMeshRenderer>() != null)
-                    { 
+                    if(GOList[i].transform.GetChild(k).GetComponent<SkinnedMeshRenderer>() != null)
+                    {
+                        Debug.Log("ENterd skinned mesh loop");
                         Mesh tempMesh = new Mesh();
                         Mesh tempMesh2 = new Mesh();
                         tempMesh.name = "MyMesh " + j + "-" + k;
@@ -94,8 +95,8 @@ public class ProximityManager : MonoBehaviour
                         npcMeshesGO[j].Add(tempGO);
                     }
                 }
-
-                if (Vector3.Distance(mainCamera.transform.position, GOList[i].transform.position) > ANIMATING_DISTANCE)
+           
+                if(Vector3.Distance(mainCamera.transform.position, GOList[i].transform.position) > ANIMATING_DISTANCE)
                 {
                     BakeIt(GOList[i], j);
                 }
@@ -107,7 +108,7 @@ public class ProximityManager : MonoBehaviour
             }
         }
 
-        //Start coroutine ffor swapping back and forth the walking meshes
+        //Coroutine for swapping out between 2 meshes
         StartCoroutine("WalkSwap");
 
         StartCoroutine("SmoothWalk");
@@ -116,6 +117,8 @@ public class ProximityManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (updateIndex == 0)
+        {
             //test distance between camera and npcs
             for (int i = 0; i < npcs.Count; i++)
             {
@@ -138,27 +141,36 @@ public class ProximityManager : MonoBehaviour
                     }
                 }
             }
-
+            updateIndex++;
+        }
+        else if(updateIndex == 15)
+        {
+            updateIndex = 0;
+        }
+        else
+        {
+            updateIndex++;
+        }
     }
 
     IEnumerator WalkSwap()
     {
-        for (; ; )
+        for ( ; ; )
         {
             //if first grouping
             if (walkIndex == 0)
             {
                 AnimateGroup(0);
             }
-            else if (walkIndex == 1)
+            else if(walkIndex == 1)
             {
                 AnimateGroup(1);
             }
-            else if (walkIndex == 2)
+            else if(walkIndex == 2)
             {
                 AnimateGroup(2);
             }
-            else if (walkIndex == 3)
+            else if(walkIndex == 3)
             {
                 AnimateGroup(3);
             }
@@ -166,24 +178,18 @@ public class ProximityManager : MonoBehaviour
             {
                 //do nothing
             }
-
             yield return new WaitForSeconds(.1f);
         }
     }
 
     IEnumerator SmoothWalk()
     {
-        for (; ; )
+        for ( ; ; )
         {
-            for (int i = 0; i < npcs.Count; i++)
+            for(int i = 0; i < npcs.Count; i++)
             {
-                //if (npcs[i].activeSelf)
-                //{
-                //npcs[i].transform.position = new Vector3(npcs[i].transform.position.x, npcs[i].transform.position.y, npcs[i].transform.position.z + 0.0155f);
-                //}
                 npcs[i].transform.position = new Vector3(npcs[i].transform.position.x, npcs[i].transform.position.y, npcs[i].transform.position.z + 0.0155f);
-
-                for (int j = 0; j < npcMeshesGO[i].Count; j++)
+                for(int j = 0; j < npcMeshesGO[i].Count; j++)
                 {
                     npcMeshesGO[i][j].transform.position = new Vector3(npcMeshesGO[i][j].transform.position.x, npcMeshesGO[i][j].transform.position.y, npcMeshesGO[i][j].transform.position.z + 0.0155f);
                 }
@@ -193,35 +199,23 @@ public class ProximityManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Bakes the GameObject passed in
+    /// Bakes the GameObject Passed in
     /// </summary>
     /// <param name="gO">GameObject to be baked</param>
-    /// <param name="j">the index of that GameObject for reference in npcMeshes list</param>
+    /// <param name="j">jth element</param>
     void BakeIt(GameObject gO, int j)
     {
-        
-        //Vector3 npcLoc = gO.transform.position;
-
         //get animator and call the SampleAnimation function on the ith element
         Animator anim = gO.GetComponent<Animator>();
         anim.runtimeAnimatorController.animationClips[0].SampleAnimation(gO, 0.2f);
 
-        //bake mesh
-        //gO.GetComponentInChildren<SkinnedMeshRenderer>().BakeMesh(npcMeshes[j]);
-
-        //bake mesh for each skinned mesh renderer component under the gameobject passed in as gO
+        //bake mesh for each skinned mesh renderer component under the gameObject passed in as arg0
         SkinnedMeshRenderer[] listOSkins = gO.GetComponentsInChildren<SkinnedMeshRenderer>();
-        for (int i = 0; i < listOSkins.Length; i++)
+        for(int i = 0; i < listOSkins.Length; i++)
         {
-
-            Debug.Log("Before : npcMeshes[j][i]: " + npcMeshes[j][i].name);
-
-            //listOSkins[i].BakeMesh(npcMeshesGO[j][i].GetComponent<MeshFilter>().mesh);
             listOSkins[i].BakeMesh(npcMeshes[j][i]);
 
-            Debug.Log("After : npcMeshes[j][i]: " + npcMeshes[j][i].name);
-
-            if (npcMeshesGO[j][i].name.Contains("-3") || npcMeshesGO[j][i].name.Contains("-6"))
+            if(npcMeshesGO[j][i].name.Contains("-3") || npcMeshesGO[j][i].name.Contains("-6"))
             {
                 npcMeshesGO[j][i].GetComponent<MeshRenderer>().materials = meshTemplate2.GetComponent<MeshRenderer>().materials;
             }
@@ -234,34 +228,27 @@ public class ProximityManager : MonoBehaviour
                 npcMeshesGO[j][i].GetComponent<MeshRenderer>().materials = meshTemplate.GetComponent<MeshRenderer>().materials;
             }
 
-            //make the mesh and skinned mesh the same loc
-            //gO.transform.position = npcLoc;
-
             npcMeshesGO[j][i].SetActive(true);
         }
-        for(int i = 0; i < npcMeshesGO[j].Count; i ++)
+
+        for(int i = 0; i < npcMeshesGO[j].Count; i++)
         {
             npcMeshesGO[j][i].transform.position = gO.transform.position;
         }
 
-
-        //Add second mesh group
         anim.runtimeAnimatorController.animationClips[0].SampleAnimation(gO, 0.6f);
-        for (int i = 0; i < listOSkins.Length; i++)
+        for(int i = 0; i < listOSkins.Length; i++)
         {
-            //listOSkins[i].BakeMesh(npcMeshesGO[j][i].GetComponent<MeshFilter>().mesh);
-
             listOSkins[i].BakeMesh(npcMeshes2[j][i]);
         }
         gO.SetActive(false);
-        
     }
 
     /// <summary>
-    /// Animates the group passed in. This is used to stagger the animations so they don't look like
-    /// synchronized swimmers.
+    /// Animates the group passed in. This is used to stagger the animations so they don't look
+    /// like synchronized swimmers.
     /// </summary>
-    /// <param name="groupNumber">The group to animate</param>
+    /// <param name="groupNumber">the group to animate</param>
     void AnimateGroup(int groupNumber)
     {
         //for every gameobject holding a mesh component
@@ -270,32 +257,19 @@ public class ProximityManager : MonoBehaviour
             //if it is 1, 2, 3, or group 4's turn
             if (i % 4 == groupNumber)
             {
-                if (isWalk[i]) //if first walk frame
+                if (isWalk[i])
                 {
                     for (int j = 0; j < npcMeshesGO[i].Count; j++)
                     {
-                        Debug.Log("isWalk1 = true || npcMeshesGO[i][j].name: " + npcMeshesGO[i][j].name);
                         npcMeshesGO[i][j].GetComponent<MeshFilter>().mesh = npcMeshes[i][j];
-                        //npcMeshesGO[i][j].transform.position = new Vector3(npcMeshesGO[i][j].transform.position.x, npcMeshesGO[i][j].transform.position.y, npcMeshesGO[i][j].transform.position.z + 0.5f);
-                        if (!npcs[i].activeSelf)
-                        {
-                            //npcs[i].transform.position = new Vector3(npcs[i].transform.position.x, npcs[i].transform.position.y, npcs[i].transform.position.z + 0.5f);
-                        }
                     }
                     isWalk[i] = !isWalk[i];
                 }
                 else
                 {
-
                     for (int j = 0; j < npcMeshesGO[i].Count; j++)
                     {
-                        Debug.Log("isWalk1 = false || npcMeshesGO[i][j].name: " + npcMeshesGO[i][j].name);
                         npcMeshesGO[i][j].GetComponent<MeshFilter>().mesh = npcMeshes2[i][j];
-                        //npcMeshesGO[i][j].transform.position = new Vector3(npcMeshesGO[i][j].transform.position.x, npcMeshesGO[i][j].transform.position.y, npcMeshesGO[i][j].transform.position.z + 0.5f);
-                        if (!npcs[i].activeSelf)
-                        {
-                            //npcs[i].transform.position = new Vector3(npcs[i].transform.position.x, npcs[i].transform.position.y, npcs[i].transform.position.z + 0.5f);
-                        }
                     }
                     isWalk[i] = !isWalk[i];
                 }
@@ -309,6 +283,5 @@ public class ProximityManager : MonoBehaviour
         {
             walkIndex++;
         }
-        
     }
 }
